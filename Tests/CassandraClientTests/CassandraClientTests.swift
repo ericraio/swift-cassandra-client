@@ -38,8 +38,8 @@ final class Tests: XCTestCase {
         self.configuration.username = env["CASSANDRA_USER"]
         self.configuration.password = env["CASSANDRA_PASSWORD"]
         self.configuration.keyspace = keyspace
-        self.configuration.requestTimeoutMillis = UInt32(24_000)  // Default: 12_000 ms
-        self.configuration.connectTimeoutMillis = UInt32(10_000)  // Default: 5_000 ms
+        self.configuration.requestTimeoutMillis = UInt32(24000)  // Default: 12_000 ms
+        self.configuration.connectTimeoutMillis = UInt32(10000)  // Default: 5_000 ms
 
         var logger = Logger(label: "test")
         logger.logLevel = .debug
@@ -70,11 +70,17 @@ final class Tests: XCTestCase {
         defer { XCTAssertNoThrow(try session.shutdown()) }
 
         let tableName = "test_\(DispatchTime.now().uptimeNanoseconds)"
-        XCTAssertNoThrow(try session.run("create table \(tableName) (data bigint primary key);").wait())
+        XCTAssertNoThrow(
+            try session.run("create table \(tableName) (data bigint primary key);")
+                .wait()
+        )
 
         let count = Int.random(in: 10...100)
         for index in 0..<count {
-            XCTAssertNoThrow(try session.run("insert into \(tableName) (data) values (\(index));").wait())
+            XCTAssertNoThrow(
+                try session.run("insert into \(tableName) (data) values (\(index));")
+                    .wait()
+            )
         }
 
         let result = try! session.query("select * from \(tableName);").wait()
@@ -117,7 +123,10 @@ final class Tests: XCTestCase {
                 ).wait()
             }
         )
-        XCTAssertNoThrow(try cassandraClient.run("create table test (data bigint primary key);").wait())
+        XCTAssertNoThrow(
+            try cassandraClient.run("create table test (data bigint primary key);")
+                .wait()
+        )
     }
 
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -176,7 +185,10 @@ final class Tests: XCTestCase {
             try cassandraClient.run("create table \(tableName) (id int primary key);").wait()
         )
         XCTAssertNoThrow(try cassandraClient.shutdown())
-        XCTAssertThrowsError(try cassandraClient.query("select * from \(tableName);").wait()) { error in
+        XCTAssertThrowsError(
+            try cassandraClient.query("select * from \(tableName);")
+                .wait()
+        ) { error in
             XCTAssertEqual(error as? CassandraClient.Error, CassandraClient.Error.disconnected)
         }
         XCTAssertNoThrow(try cassandraClient.shutdown())
@@ -225,7 +237,8 @@ final class Tests: XCTestCase {
     func testQueryIterator() {
         let tableName = "test_\(DispatchTime.now().uptimeNanoseconds)"
         XCTAssertNoThrow(
-            try self.cassandraClient.run("create table \(tableName) (id int primary key, data text);")
+            try self.cassandraClient
+                .run("create table \(tableName) (id int primary key, data text);")
                 .wait()
         )
 
@@ -245,7 +258,10 @@ final class Tests: XCTestCase {
 
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
-        XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(futures, on: eventLoopGroup.next()).wait())
+        XCTAssertNoThrow(
+            try EventLoopFuture.andAllSucceed(futures, on: eventLoopGroup.next())
+                .wait()
+        )
 
         let rows = try! self.cassandraClient.query("select id, data from \(tableName);").wait()
         XCTAssertEqual(rows.count, count, "result count should match")
@@ -340,7 +356,8 @@ final class Tests: XCTestCase {
                     }
                 }
 
-                let rows = try await self.cassandraClient.query("select id, data from \(tableName);")
+                let rows = try await self.cassandraClient
+                    .query("select id, data from \(tableName);")
                 XCTAssertEqual(rows.count, count, "result count should match")
                 XCTAssertEqual(rows.columnsCount, 2, "result column count should match")
                 let ids = rows.compactMap { $0.column(0)?.int32 }
@@ -373,7 +390,8 @@ final class Tests: XCTestCase {
     func testQueryBuffered() {
         let tableName = "test_\(DispatchTime.now().uptimeNanoseconds)"
         XCTAssertNoThrow(
-            try self.cassandraClient.run("create table \(tableName) (id int primary key, data text);")
+            try self.cassandraClient
+                .run("create table \(tableName) (id int primary key, data text);")
                 .wait()
         )
 
@@ -390,7 +408,10 @@ final class Tests: XCTestCase {
 
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
-        XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(futures, on: eventLoopGroup.next()).wait())
+        XCTAssertNoThrow(
+            try EventLoopFuture.andAllSucceed(futures, on: eventLoopGroup.next())
+                .wait()
+        )
 
         let rows = try! self.cassandraClient.query("select id, data from \(tableName);") {
             $0.column(0)?.int32
@@ -424,9 +445,10 @@ final class Tests: XCTestCase {
                     }
                 }
 
-                let rows = try await self.cassandraClient.query("select id, data from \(tableName);") {
-                    $0.column(0)?.int32
-                }
+                let rows = try await self.cassandraClient
+                    .query("select id, data from \(tableName);") {
+                        $0.column(0)?.int32
+                    }
                 XCTAssertEqual(rows.count, count, "result count should match")
                 if rows.count == count {
                     for (index, value) in rows.sorted().enumerated() {
@@ -441,7 +463,8 @@ final class Tests: XCTestCase {
     func testSelectIn() throws {
         let tableName = "test_\(DispatchTime.now().uptimeNanoseconds)"
         XCTAssertNoThrow(
-            try self.cassandraClient.run("create table \(tableName) (id int primary key, data text);")
+            try self.cassandraClient
+                .run("create table \(tableName) (id int primary key, data text);")
                 .wait()
         )
 
@@ -458,7 +481,10 @@ final class Tests: XCTestCase {
 
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
-        XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(futures, on: eventLoopGroup.next()).wait())
+        XCTAssertNoThrow(
+            try EventLoopFuture.andAllSucceed(futures, on: eventLoopGroup.next())
+                .wait()
+        )
 
         let selectIDs: [Int32] = (0...Int.random(in: 1...5)).map { _ in
             Int32.random(in: 0..<Int32(count))
@@ -511,13 +537,17 @@ final class Tests: XCTestCase {
                 col8: Date(),
                 col9: UUID(),
                 col10: TimeBasedUUID(),
-                col11: randomBytes(size: Int.random(in: 10...1024 * 1024)),
+                col11: self.randomBytes(size: Int.random(in: 10...1024 * 1024)),
                 col12: Bool.random(),
                 col13: nil,
-                col14: (0...Int.random(in: 1...3)).map { _ in Int8.random(in: Int8.min...Int8.max) },
-                col15: (0...Int.random(in: 1...3)).map { _ in Int16.random(in: Int16.min...Int16.max) },
-                col16: (0...Int.random(in: 1...3)).map { _ in Int32.random(in: Int32.min...Int32.max) },
-                col17: (0...Int.random(in: 1...3)).map { _ in Int64.random(in: Int64.min...Int64.max) },
+                col14: (0...Int.random(in: 1...3))
+                    .map { _ in Int8.random(in: Int8.min...Int8.max) },
+                col15: (0...Int.random(in: 1...3))
+                    .map { _ in Int16.random(in: Int16.min...Int16.max) },
+                col16: (0...Int.random(in: 1...3))
+                    .map { _ in Int32.random(in: Int32.min...Int32.max) },
+                col17: (0...Int.random(in: 1...3))
+                    .map { _ in Int64.random(in: Int64.min...Int64.max) },
                 col18: (0...Int.random(in: 1...3)).map { _ in
                     Float32.random(in: Float(Int32.min)...Float(Int32.max))
                 },
@@ -600,7 +630,10 @@ final class Tests: XCTestCase {
 
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
-        XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(futures, on: eventLoopGroup.next()).wait())
+        XCTAssertNoThrow(
+            try EventLoopFuture.andAllSucceed(futures, on: eventLoopGroup.next())
+                .wait()
+        )
 
         let result: [Model] = try! self.cassandraClient.query("select * from \(tableName);").wait()
             .sorted { a, b in a.col1 < b.col1 }
@@ -650,14 +683,16 @@ final class Tests: XCTestCase {
 
     // date: 32-bit unsigned integer representing the number of days since epoch
     // timestamp: 64-bit signed integer representing the date and time since epoch (January 1 1970 at 00:00:00 GMT) in milliseconds.
-    //           INSERT or UPDATE string format is ISO-8601; the string must contain the date and optionally can include the time and time
+    //           INSERT or UPDATE string format is ISO-8601; the string must contain the date and
+    //           optionally can include the time and time
 
     // uuid: 128 bit universally unique identifier (UUID). Generate with the UUID function.
     // timeuuid: Version 1 UUID; unique identifier that includes a“conflict-free” timestamp. Generate with the NOW function
 
     // blob: Arbitrary bytes (no validation), expressed as hexadecimal. See Blob conversion functions.
     // boolean: True or false. Stored internally as true or false; when using the COPY TO in cqlsh to import or export data,
-    //          change the format using the BOOLSTYLE option, for example when importing survey results that have yes/no style answer column.
+    //          change the format using the BOOLSTYLE option, for example when importing survey
+    //          results that have yes/no style answer column.
 
     // IP: address string in IPv4 or IPv6 format
     func testDataTypes() {
@@ -711,13 +746,17 @@ final class Tests: XCTestCase {
             let blob = self.randomBytes(size: Int.random(in: 10...1024 * 1024))
             let bool = Bool.random()
             let null: String? = nil
-            let int8List = (0...Int.random(in: 1...3)).map { _ in Int8.random(in: Int8.min...Int8.max) }
-            let int16List = (0...Int.random(in: 1...3)).map { _ in Int16.random(in: Int16.min...Int16.max)
-            }
-            let int32List = (0...Int.random(in: 1...3)).map { _ in Int32.random(in: Int32.min...Int32.max)
-            }
-            let int64List = (0...Int.random(in: 1...3)).map { _ in Int64.random(in: Int64.min...Int64.max)
-            }
+            let int8List = (0...Int.random(in: 1...3))
+                .map { _ in Int8.random(in: Int8.min...Int8.max) }
+            let int16List = (0...Int.random(in: 1...3))
+                .map { _ in Int16.random(in: Int16.min...Int16.max)
+                }
+            let int32List = (0...Int.random(in: 1...3))
+                .map { _ in Int32.random(in: Int32.min...Int32.max)
+                }
+            let int64List = (0...Int.random(in: 1...3))
+                .map { _ in Int64.random(in: Int64.min...Int64.max)
+                }
             let float32List = (0...Int.random(in: 1...3)).map { _ in
                 Float32.random(in: Float(Int32.min)...Float(Int32.max))
             }
@@ -1128,7 +1167,8 @@ final class Tests: XCTestCase {
             "insert into \(tableName) (id, name, age, email) values (1, 'Alice', 30, 'alice@example.com');"
         ).wait()
 
-        let rows = try self.cassandraClient.query("select id, name, age, email from \(tableName);").wait()
+        let rows = try self.cassandraClient.query("select id, name, age, email from \(tableName);")
+            .wait()
         XCTAssertEqual(rows.count, 1, "expected exactly one row")
 
         // Test valid column indices
@@ -1140,11 +1180,17 @@ final class Tests: XCTestCase {
         // Test invalid indices - should throw errors
         XCTAssertThrowsError(try rows.columnName(at: -1), "negative index should throw error")
         XCTAssertThrowsError(try rows.columnName(at: 4), "out of bounds index should throw error")
-        XCTAssertThrowsError(try rows.columnName(at: 100), "large out of bounds index should throw error")
+        XCTAssertThrowsError(
+            try rows.columnName(at: 100),
+            "large out of bounds index should throw error"
+        )
 
         // Test with select *
         let rowsStar = try self.cassandraClient.query("select * from \(tableName);").wait()
-        XCTAssertNoThrow(try rowsStar.columnName(at: 0), "select * should return valid column names")
+        XCTAssertNoThrow(
+            try rowsStar.columnName(at: 0),
+            "select * should return valid column names"
+        )
         XCTAssertEqual(rowsStar.columnsCount, 4, "select * should return all 4 columns")
     }
 
@@ -1159,7 +1205,8 @@ final class Tests: XCTestCase {
         ).wait()
 
         // Test columnNames with explicit column selection
-        let rows = try self.cassandraClient.query("select id, username, score, active from \(tableName);").wait()
+        let rows = try self.cassandraClient
+            .query("select id, username, score, active from \(tableName);").wait()
         let columnNames = try rows.columnNames()
 
         XCTAssertEqual(columnNames.count, 4, "should return 4 column names")
@@ -1183,7 +1230,8 @@ final class Tests: XCTestCase {
         }
 
         // Test columnNames with partial column selection
-        let rowsPartial = try self.cassandraClient.query("select username, active from \(tableName);").wait()
+        let rowsPartial = try self.cassandraClient
+            .query("select username, active from \(tableName);").wait()
         let columnNamesPartial = try rowsPartial.columnNames()
         XCTAssertEqual(columnNamesPartial.count, 2, "partial select should return 2 column names")
         XCTAssertEqual(columnNamesPartial[0], "username", "first column should be 'username'")
@@ -1192,7 +1240,11 @@ final class Tests: XCTestCase {
         // Test columnNames with single column
         let rowsSingle = try self.cassandraClient.query("select id from \(tableName);").wait()
         let columnNamesSingle = try rowsSingle.columnNames()
-        XCTAssertEqual(columnNamesSingle.count, 1, "single column select should return 1 column name")
+        XCTAssertEqual(
+            columnNamesSingle.count,
+            1,
+            "single column select should return 1 column name"
+        )
         XCTAssertEqual(columnNamesSingle[0], "id", "single column should be 'id'")
     }
 
@@ -1219,8 +1271,8 @@ final class Tests: XCTestCase {
         serialConfig.username = env["CASSANDRA_USER"]
         serialConfig.password = env["CASSANDRA_PASSWORD"]
         serialConfig.keyspace = keyspace
-        serialConfig.requestTimeoutMillis = UInt32(24_000)
-        serialConfig.connectTimeoutMillis = UInt32(10_000)
+        serialConfig.requestTimeoutMillis = UInt32(24000)
+        serialConfig.connectTimeoutMillis = UInt32(10000)
         serialConfig.serialConsistency = .serial
 
         var logger = Logger(label: "test")
@@ -1241,8 +1293,14 @@ final class Tests: XCTestCase {
         defer { XCTAssertNoThrow(try serialSession.shutdown()) }
 
         let tableName = "test_serial_\(DispatchTime.now().uptimeNanoseconds)"
-        XCTAssertNoThrow(try serialSession.run("create table \(tableName) (id int primary key, value int);").wait())
-        XCTAssertNoThrow(try serialSession.run("insert into \(tableName) (id, value) values (1, 100);").wait())
+        XCTAssertNoThrow(
+            try serialSession
+                .run("create table \(tableName) (id int primary key, value int);").wait()
+        )
+        XCTAssertNoThrow(
+            try serialSession
+                .run("insert into \(tableName) (id, value) values (1, 100);").wait()
+        )
 
         let lwtQuery = "update \(tableName) set value = 200 where id = 1 if value = 100;"
         var serialResult: CassandraClient.Rows?
@@ -1252,7 +1310,10 @@ final class Tests: XCTestCase {
         let serialRows = Array(serialResult!)
         XCTAssertFalse(serialRows.isEmpty, "Serial LWT query should return at least one row")
         if let firstRow = serialRows.first {
-            XCTAssertNotNil(firstRow.column("[applied]")?.bool, "Serial LWT result should contain [applied] column")
+            XCTAssertNotNil(
+                firstRow.column("[applied]")?.bool,
+                "Serial LWT result should contain [applied] column"
+            )
         }
 
         var localSerialConfig = serialConfig
@@ -1266,9 +1327,13 @@ final class Tests: XCTestCase {
 
         let tableName2 = "test_local_serial_\(DispatchTime.now().uptimeNanoseconds)"
         XCTAssertNoThrow(
-            try localSerialSession.run("create table \(tableName2) (id int primary key, value int);").wait()
+            try localSerialSession
+                .run("create table \(tableName2) (id int primary key, value int);").wait()
         )
-        XCTAssertNoThrow(try localSerialSession.run("insert into \(tableName2) (id, value) values (1, 300);").wait())
+        XCTAssertNoThrow(
+            try localSerialSession
+                .run("insert into \(tableName2) (id, value) values (1, 300);").wait()
+        )
 
         let localLwtQuery = "update \(tableName2) set value = 400 where id = 1 if value = 300;"
         var localSerialResult: CassandraClient.Rows?
@@ -1276,7 +1341,10 @@ final class Tests: XCTestCase {
         XCTAssertNotNil(localSerialResult, "Local serial consistency LWT should succeed")
 
         let localSerialRows = Array(localSerialResult!)
-        XCTAssertFalse(localSerialRows.isEmpty, "Local serial LWT query should return at least one row")
+        XCTAssertFalse(
+            localSerialRows.isEmpty,
+            "Local serial LWT query should return at least one row"
+        )
         if let firstRow = localSerialRows.first {
             XCTAssertNotNil(
                 firstRow.column("[applied]")?.bool,
@@ -1294,8 +1362,14 @@ final class Tests: XCTestCase {
         defer { XCTAssertNoThrow(try nilSerialSession.shutdown()) }
 
         let tableName3 = "test_nil_serial_\(DispatchTime.now().uptimeNanoseconds)"
-        XCTAssertNoThrow(try nilSerialSession.run("create table \(tableName3) (id int primary key, value int);").wait())
-        XCTAssertNoThrow(try nilSerialSession.run("insert into \(tableName3) (id, value) values (1, 500);").wait())
+        XCTAssertNoThrow(
+            try nilSerialSession
+                .run("create table \(tableName3) (id int primary key, value int);").wait()
+        )
+        XCTAssertNoThrow(
+            try nilSerialSession
+                .run("insert into \(tableName3) (id, value) values (1, 500);").wait()
+        )
 
         let nilLwtQuery = "update \(tableName3) set value = 600 where id = 1 if value = 500;"
         var nilSerialResult: CassandraClient.Rows?
@@ -1319,7 +1393,7 @@ final class Tests: XCTestCase {
 
         XCTAssertNoThrow(
             try self.cassandraClient.run(
-                "insert into \(tableName) (id, nullable_array, empty_array) values (1, null, []);",
+                "insert into \(tableName) (id, nullable_array, empty_array) values (1, null, []);"
             ).wait()
         )
 
