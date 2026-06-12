@@ -1038,6 +1038,11 @@ extension CassandraClient {
                 if self.configuration.logBoundValues {
                     logger.trace("\(statement.parameters)")
                 }
+                do {
+                    try self.bindUDTsIfNeeded(statement)
+                } catch {
+                    return eventLoop.makeFailedFuture(error)
+                }
                 // Capture only Sendable values before bridging — never `statement` into the completion.
                 let query = statement.query
                 let consistency = statement.options.consistency ?? self.configuration.consistency
@@ -1056,6 +1061,19 @@ extension CassandraClient {
                     logger: logger
                 )
             }
+        }
+
+        /// Resolve and bind any UDT parameters from the connected session's schema metadata.
+        /// No-op when the statement has no UDT parameters.
+        private func bindUDTsIfNeeded(_ statement: Statement) throws {
+            guard statement.needsUDTBinding else { return }
+            guard let schemaMeta = self.underlying.getSchemaMeta() else {
+                throw CassandraClient.Error.badParams(
+                    "Cannot retrieve schema metadata to resolve UDT types"
+                )
+            }
+            defer { cass_schema_meta_free(schemaMeta) }
+            try statement.bindUDTs(schemaMeta: schemaMeta, keyspace: self.keyspace)
         }
 
         func execute(
@@ -1866,6 +1884,7 @@ extension CassandraClient.Session {
             if self.configuration.logBoundValues {
                 logger.trace("\(statement.parameters)")
             }
+            try self.bindUDTsIfNeeded(statement)
             let query = statement.query
             let consistency = statement.options.consistency ?? self.configuration.consistency
             let boundValues =
