@@ -215,6 +215,8 @@ extension CassandraClient {
                     result = try self.bindArray(array, at: index)
                 case .stringArray(let array):
                     result = try self.bindArray(array, at: index)
+                case .uuidArray(let array):
+                    result = try self.bindArray(array, at: index)
                 default:
                     result = try self.bindMapCases(parameter, index)
                 }
@@ -280,6 +282,9 @@ extension CassandraClient {
                     appendResult = cass_collection_append_double(collection, value)
                 case let value as String:
                     appendResult = cass_collection_append_string(collection, value)
+                case let value as Foundation.UUID:
+                    var cassUuid = CassUuid(value.uuid)
+                    appendResult = cass_collection_append_uuid(collection, cassUuid)
                 default:
                     throw CassandraClient.Error.badParams("Array of \(T.self) is not supported")
                 }
@@ -484,6 +489,7 @@ extension CassandraClient {
             case float32Array([Float32])
             case doubleArray([Double])
             case stringArray([String])
+            case uuidArray([Foundation.UUID])
 
             case udt(UDT)
             case udtArray([UDT])
